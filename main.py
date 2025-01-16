@@ -1,6 +1,22 @@
 import cv2
 import streamlit as st
 import mediapipe as mp
+from roboflow import Roboflow
+from inference_sdk import InferenceHTTPClient
+
+# Initialize Roboflow with your API key
+rf = Roboflow(api_key="iFjPUVPeTAGflBUC7OvK")
+
+# Load the project and version
+project = rf.workspace("anagh").project("american-sign-language-letters-1hqg4")  # Roboflow 100 Sign Language Project
+model = project.version(1).model
+
+
+CLIENT = InferenceHTTPClient(
+    api_url="https://detect.roboflow.com",
+    api_key="iFjPUVPeTAGflBUC7OvK"
+)
+ 
 
 # Custom CSS for styling
 st.markdown(
@@ -88,7 +104,8 @@ if page == "Home":
 
 # Page 2: Camera
 elif page == "Camera":
-    st.title("Face and Hand Detection")
+    st.title("ASL Letter Detection")
+    FRAME_WINDOW = st.image([])
 
     # Placeholder for the video frame
     frame_placeholder = st.empty()
@@ -99,12 +116,6 @@ elif page == "Camera":
     # Initialize the camera
     cap = cv2.VideoCapture(0)  # Use 0 for the default camera
 
-    # Initialize MediaPipe Hands module
-    mp_hands = mp.solutions.hands
-    mp_drawing = mp.solutions.drawing_utils
-    hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-
-    # Check if the camera is opened
     if not cap.isOpened():
         st.error("Could not open the camera.")
     else:
@@ -114,20 +125,27 @@ elif page == "Camera":
                 st.error("Failed to capture frame. Exiting.")
                 break
 
-            # Convert BGR to RGB for processing
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-
-            # Detect hands
-            hand_results = hands.process(frame_rgb)
-            if hand_results.multi_hand_landmarks:
-                for hand_landmarks in hand_results.multi_hand_landmarks:
-                    mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-            # Convert frame to RGB for Streamlit display
+            cv2.imwrite("frame.jpg", frame)
+    
+            # Make prediction
+            prediction = model.predict("frame.jpg", confidence=40).json()
+            predictions = prediction.get("predictions", [])
+            
+            # Draw bounding boxes
+            for pred in predictions:
+                x, y, w, h = int(pred['x']), int(pred['y']), int(pred['width']), int(pred['height'])
+                label = pred['class']
+                confidence = pred['confidence']
+                
+                # Draw Rectangle and Label
+                cv2.rectangle(frame, (x - w//2, y - h//2), (x + w//2, y + h//2), (0, 255, 0), 2)
+                cv2.putText(frame, f"{label}: {confidence:.2f}", (x - w//2, y - h//2 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
+            # Convert BGR to RGB for Streamlit
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_placeholder.image(frame, channels="RGB")
+            FRAME_WINDOW.image(frame)
 
-    # Release the camera and clean up
     cap.release()
     cv2.destroyAllWindows()
+    
