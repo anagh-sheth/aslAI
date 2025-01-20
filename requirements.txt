@@ -1,0 +1,8 @@
+opencv-python
+streamlit
+mediapipe
+roboflow
+inference_sdk
+os
+dotenv
+numpypandas
