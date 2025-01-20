@@ -1,0 +1,7 @@
+cv2
+streamlit
+mediapipe
+roboflow
+inference_sdk
+os
+dotenv
