@@ -1,5 +1,6 @@
 opencv-python-headless
 streamlit
+libgl1-mesa-glx
 mediapipe
 roboflow
 inference_sdk
