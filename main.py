@@ -470,7 +470,7 @@ if page == "Home":
 
 # Page 2: Camera
 elif page == "Camera":
-    st.markdown('<h1 class="main-title">ASL Letter Detection/h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">ASL Letter Detection</h1>', unsafe_allow_html=True)
     FRAME_WINDOW = st.image([])
 
     # Placeholder for the video frame
