@@ -280,7 +280,7 @@ st.markdown("""
     }
     
     .letter-card {
-        background: white;
+        background: #89CFF0;
         padding: 2.5rem;
         border-radius: 24px;
         box-shadow: 0 15px 35px rgba(0,0,0,0.1);
@@ -437,7 +437,7 @@ page = st.sidebar.radio("Go to", ["Home", "Camera"])
 # Page 1: Home
 if page == "Home":
     st.markdown('<h1 class="main-title">Learn American Sign Language with AI</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="description">Master ASL through interactive lessons and real time feedback</p>', unsafe_allow_html=True)
+    st.markdown('<p class="description" style="color: #00008B;">Master ASL through interactive lessons and real time feedback</p>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
