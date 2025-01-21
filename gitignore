@@ -1,2 +1,4 @@
-/frame.jpg
-/Pipfile.lock
+frame.jpg
+Pipfile.lock
+
+__pycache__/
