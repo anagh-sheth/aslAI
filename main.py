@@ -5,6 +5,7 @@ from roboflow import Roboflow
 from inference_sdk import InferenceHTTPClient
 import os
 from dotenv import load_dotenv
+import time
 load_dotenv()
 # Initialize Roboflow with your API key
 rf = Roboflow(api_key="3uLxZ8MmVP8UrF7XDKXs")
@@ -485,6 +486,10 @@ elif page == "Camera":
     if not cap.isOpened():
         st.error("Could not open the camera.")
     else:
+        frame_time = time.time()
+        fps = 0
+        fps_history = []
+        
         while not stop_button:
             ret, frame = cap.read()
             if not ret:
@@ -507,6 +512,22 @@ elif page == "Camera":
                 cv2.rectangle(frame, (x - w//2, y - h//2), (x + w//2, y + h//2), (0, 255, 0), 2)
                 cv2.putText(frame, f"{label}: {confidence:.2f}", (x - w//2, y - h//2 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
+            # Calculate and display FPS
+            current_time = time.time()
+            fps = 1 / (current_time - frame_time)
+            frame_time = current_time
+            fps_history.append(fps)
+            
+            # Only keep last 10 FPS measurements
+            if len(fps_history) > 10:
+                fps_history.pop(0)
+            
+            avg_fps = sum(fps_history) / len(fps_history)
+            
+            # Add FPS display to frame
+            cv2.putText(frame, f"FPS: {avg_fps:.1f}", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
             # Convert BGR to RGB for Streamlit
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
