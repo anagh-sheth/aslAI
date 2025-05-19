@@ -474,65 +474,188 @@ elif page == "Camera":
     st.markdown('<h1 class="main-title">ASL Letter Detection</h1>', unsafe_allow_html=True)
     FRAME_WINDOW = st.image([])
 
-    # Placeholder for the video frame
-    frame_placeholder = st.empty()
-
-    # Add a button to stop the video
-    stop_button = st.button("Stop")
-
-    # Initialize the camera
-    cap = cv2.VideoCapture(0)  # Use 0 for the default camera
-
-    if not cap.isOpened():
-        st.error("Could not open the camera.")
-    else:
-        frame_time = time.time()
-        fps = 0
-        fps_history = []
-        
-        while not stop_button:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("Failed to capture frame. Exiting.")
-                break
-
-            cv2.imwrite("frame.jpg", frame)
+    # Initialize camera with error handling
+    cap = initialize_camera()
     
-            # Make prediction
-            prediction = model.predict("frame.jpg", confidence=40).json()
-            predictions = prediction.get("predictions", [])
-            
-            # Draw bounding boxes
-            for pred in predictions:
-                x, y, w, h = int(pred['x']), int(pred['y']), int(pred['width']), int(pred['height'])
-                label = pred['class']
-                confidence = pred['confidence']
-                
-                # Draw Rectangle and Label
-                cv2.rectangle(frame, (x - w//2, y - h//2), (x + w//2, y + h//2), (0, 255, 0), 2)
-                cv2.putText(frame, f"{label}: {confidence:.2f}", (x - w//2, y - h//2 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            
-            # Calculate and display FPS
-            current_time = time.time()
-            fps = 1 / (current_time - frame_time)
-            frame_time = current_time
-            fps_history.append(fps)
-            
-            # Only keep last 10 FPS measurements
-            if len(fps_history) > 10:
-                fps_history.pop(0)
-            
-            avg_fps = sum(fps_history) / len(fps_history)
-            
-            # Add FPS display to frame
-            cv2.putText(frame, f"FPS: {avg_fps:.1f}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
-            # Convert BGR to RGB for Streamlit
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(frame)
+    if cap is None:
+        show_camera_troubleshooting()
+    else:
+        # Add camera controls
+        col1, col2 = st.columns(2)
+        with col1:
+            start_button = st.button("Start Camera")
+        with col2:
+            stop_button = st.button("Stop Camera")
+        
+        # Initialize session state for camera status
+        if 'camera_active' not in st.session_state:
+            st.session_state.camera_active = False
+        
+        if start_button:
+            st.session_state.camera_active = True
+        
+        if stop_button:
+            st.session_state.camera_active = False
+            cap.release()
+            cv2.destroyAllWindows()
+        
+        # Main camera loop
+        if st.session_state.camera_active:
+            try:
+                while st.session_state.camera_active:
+                    ret, frame = cap.read()
+                    if not ret:
+                        st.error("Failed to capture frame. Please check your camera connection.")
+                        st.session_state.camera_active = False
+                        break
 
-    cap.release()
-    cv2.destroyAllWindows()
+                    # Save frame for prediction
+                    cv2.imwrite("frame.jpg", frame)
+                    
+                    try:
+                        # Make prediction
+                        prediction = model.predict("frame.jpg", confidence=40).json()
+                        predictions = prediction.get("predictions", [])
+                        
+                        # Draw bounding boxes
+                        for pred in predictions:
+                            x, y, w, h = int(pred['x']), int(pred['y']), int(pred['width']), int(pred['height'])
+                            label = pred['class']
+                            confidence = pred['confidence']
+                            
+                            # Draw Rectangle and Label
+                            cv2.rectangle(frame, (x - w//2, y - h//2), (x + w//2, y + h//2), (0, 255, 0), 2)
+                            cv2.putText(frame, f"{label}: {confidence:.2f}", (x - w//2, y - h//2 - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    except Exception as e:
+                        st.warning(f"Error during prediction: {str(e)}")
+                    
+                    # Convert BGR to RGB for Streamlit
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    FRAME_WINDOW.image(frame)
+                    
+                    # Add a small delay to prevent overwhelming the system
+                    time.sleep(0.1)
+                    
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+                st.session_state.camera_active = False
+            finally:
+                cap.release()
+                cv2.destroyAllWindows()
+
+    def initialize_camera():
+        """
+        Try to initialize the camera with multiple fallback options
+        Returns the camera object if successful, None if all attempts fail
+        """
+        # Try different camera indices
+        for camera_index in [0, 1, 2]:
+            try:
+                cap = cv2.VideoCapture(camera_index)
+                if cap.isOpened():
+                    # Test if we can actually read a frame
+                    ret, frame = cap.read()
+                    if ret:
+                        return cap
+                    cap.release()
+            except Exception as e:
+                st.warning(f"Failed to open camera {camera_index}: {str(e)}")
+                continue
+        
+        # If no camera is found, try to open using device path
+        try:
+            cap = cv2.VideoCapture("/dev/video0")
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    return cap
+                cap.release()
+        except Exception as e:
+            st.warning(f"Failed to open camera at /dev/video0: {str(e)}")
+        
+        return None
+
+    def show_camera_troubleshooting():
+        st.markdown("""
+            ### Camera Troubleshooting Guide
+            
+            If you're having issues with the camera, try these steps:
+            
+            1. **Check Camera Connection**
+               - Ensure your camera is properly connected
+               - Try unplugging and reconnecting your camera
+            
+            2. **Check Permissions**
+               - Make sure the application has permission to access your camera
+               - On macOS: System Preferences > Security & Privacy > Privacy > Camera
+               - On Windows: Settings > Privacy & Security > Camera
+            
+            3. **Check Other Applications**
+               - Close other applications that might be using the camera
+               - Restart your computer if the issue persists
+            
+            4. **Check System Settings**
+               - Verify your camera works in other applications
+               - Check if your camera is selected as the default device
+            
+            5. **Technical Details**
+               - Camera Index: 0 (default)
+               - Resolution: 640x480
+               - Format: RGB
+        """)
+        
+    def get_camera_settings():
+        st.sidebar.header("Camera Settings")
+        
+        # Camera selection
+        camera_index = st.sidebar.selectbox(
+            "Select Camera",
+            options=[0, 1, 2],
+            index=0,
+            help="Select which camera to use (0 is usually the default)"
+        )
+        
+        # Resolution selection
+        resolution = st.sidebar.selectbox(
+            "Camera Resolution",
+            options=["640x480", "1280x720", "1920x1080"],
+            index=0,
+            help="Select camera resolution"
+        )
+        
+        # Parse resolution
+        width, height = map(int, resolution.split('x'))
+        
+        return {
+            'camera_index': camera_index,
+            'width': width,
+            'height': height
+        }
+
+    # Modify the camera initialization to use these settings
+    def initialize_camera_with_settings(settings):
+        cap = cv2.VideoCapture(settings['camera_index'])
+        if cap.isOpened():
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings['width'])
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings['height'])
+            return cap
+        return None
+    
+    def test_camera():
+        st.markdown("### Camera Test")
+        test_button = st.button("Test Camera")
+        
+        if test_button:
+            cap = cv2.VideoCapture(0)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    st.success("Camera is working!")
+                    st.image(frame, channels="BGR")
+                else:
+                    st.error("Camera opened but couldn't read frame")
+                cap.release()
+            else:
+                st.error("Could not open camera")
     

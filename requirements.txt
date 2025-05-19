@@ -1,8 +1,8 @@
 opencv-python-headless
 streamlit
-mediapipe
+numpy
+mediapipe==0.9.0.1
 roboflow
 inference-sdk
 python-dotenv
-numpy
 pandas
