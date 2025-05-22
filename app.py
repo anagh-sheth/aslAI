@@ -35,6 +35,9 @@ st.markdown("""
         text-align: center;
         color: white;
     }
+    .camera-page-content {
+        padding-top: 2rem;
+    }
     .feature-container {
         background-color: white;
         padding: 1.5rem;
@@ -196,6 +199,7 @@ def home_page():
     """, unsafe_allow_html=True)
 
 def camera_page():
+    st.markdown('<div class="camera-page-content">', unsafe_allow_html=True)
     st.title("ASL Camera Practice 📸")
     
     # Letter selection
@@ -259,9 +263,9 @@ def camera_page():
                             
                             if predicted_letter:
                                 if predicted_letter == selected_letter:
-                                    feedback_placeholder.success(f"Correct! This is the letter {predicted_letter} (Confidence: {confidence:.2f}%)")
+                                    feedback_placeholder.success(f"Correct! This is the letter {predicted_letter} (Confidence: {min(confidence * 100, 100):.2f}%)")
                                 else:
-                                    feedback_placeholder.warning(f"Keep trying! The model detected letter {predicted_letter} (Confidence: {confidence:.2f}%)")
+                                    feedback_placeholder.warning(f"Keep trying! The model detected letter {predicted_letter} (Confidence: {min(confidence * 100, 100):.2f}%)")
                             else:
                                 feedback_placeholder.info("No letter detected. Please try again.")
                 else:
@@ -278,13 +282,13 @@ def camera_page():
             cap.release()
             camera_placeholder.empty()
             feedback_placeholder.empty()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def toggle_camera():
     st.session_state.camera_running = not st.session_state.camera_running
 
 # Sidebar navigation
 with st.sidebar:
-    st.image("https://www.nidcd.nih.gov/sites/default/files/Content%20Images/NIDCD-ASL-hands-2.jpg", width=200)
     st.title("Navigation")
     page = st.radio("", ["Home", "Camera Practice"])
 
