@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: asl-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: ROBOFLOW_API_KEY
+        sync: false
+    autoDeploy: true
+    healthCheckPath: /_stcore/health
+    region: oregon 
